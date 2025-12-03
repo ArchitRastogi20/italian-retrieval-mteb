@@ -1,0 +1,39 @@
+# Core ML and NLP libraries
+torch
+sentence-transformers
+transformers
+numpy
+scipy
+scikit-learn
+
+# Vector search and similarity
+
+
+# Text processing
+nltk
+jieba
+pysbd
+rouge
+rouge-chinese
+
+# Data handling
+pandas
+tqdm
+jsonlines
+
+# API clients
+openai  # For keypoint metrics evaluation
+
+# Utilities
+python-dotenv  # For environment variables
+pathlib
+pickle-mixin
+
+# Optional: For advanced text processing
+# spacy
+# tokenizers
+
+# Development and debugging
+# jupyter
+# matplotlib
+# seaborn
