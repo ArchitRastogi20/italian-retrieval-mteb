@@ -30,10 +30,10 @@ pathlib
 pickle-mixin
 
 # Optional: For advanced text processing
-# spacy
-# tokenizers
+spacy
+tokenizers
 
 # Development and debugging
 # jupyter
-# matplotlib
-# seaborn
+matplotlib
+seaborn
