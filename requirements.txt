@@ -37,3 +37,4 @@ tokenizers
 # jupyter
 matplotlib
 seaborn
+openpyxl
