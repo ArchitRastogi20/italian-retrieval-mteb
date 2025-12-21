@@ -22,7 +22,7 @@ italian-retrieval-embeddings/
 ├── analysis/                # Dataset EDA and statistics
 ├── scripts/                 # Shell scripts for running experiments
 ├── results/                 # Evaluation outputs
-│   ├── figures/             # Figures and plots
+├── figures/                 # Figures and plots
 └── docs/                    # Project documentation
 ```
 
