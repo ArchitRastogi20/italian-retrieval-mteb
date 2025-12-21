@@ -19,34 +19,18 @@ logging.basicConfig(
 logger = logging.getLogger("mteb_ita_eval")
 
 BANNER = r"""
-             
+MTEB Italian Evaluation - Full (Monolingual + Cross-lingual)
 """
 
 def parse_args():
-    ap = argparse.ArgumentParser(description="MTEB v2 Italian Retrieval (Wiki + Belebele) with logging/tqdm")
+    ap = argparse.ArgumentParser(description="MTEB Italian Retrieval (Monolingual + Cross-lingual)")
     ap.add_argument("--model", required=True, help="HF model name or local path")
     ap.add_argument("--batch-size", type=int, default=128, help="Encode batch size")
     ap.add_argument("--fp16", action="store_true", help="Try FP16 on GPU (best-effort)")
     ap.add_argument("--normalize", action="store_true", help="L2-normalize embeddings in encode()")
     ap.add_argument("--save-json", default="", help="Optional path to save results JSON")
+    ap.add_argument("--cross-lingual", action="store_true", help="Include cross-lingual tasks (IT-EN, EN-IT)")
     return ap.parse_args()
-
-def maybe_enable_fp16(mteb_model):
-    """
-    Best-effort: if the MTEB wrapper exposes a SentenceTransformer under .model,
-    put it in FP16 for speed on Ampere+ (e.g., RTX 3080 Ti).
-    """
-    if not torch.cuda.is_available():
-        return False
-    try:
-        st = getattr(mteb_model, "model", None)
-        if st is not None and hasattr(st, "half"):
-            st.half()
-            logger.info("Using FP16 (half precision) for faster encoding.")
-            return True
-    except Exception as e:
-        logger.warning(f"FP16 not applied (continuing in FP32): {e}")
-    return False
 
 def main():
     args = parse_args()
@@ -71,30 +55,44 @@ def main():
             logger.warning(f"Could not enable FP16: {e}")
 
     # -------------------------
-    # Build tasks with explicit Italian subsets
+    # Build tasks with Italian subsets
     # -------------------------
     tasks = []
+    
+    # BelebeleRetrieval - Italian monolingual
     try:
+        bele_subsets = ["ita_Latn-ita_Latn"]
+        
+        # Add cross-lingual if requested
+        if args.cross_lingual:
+            bele_subsets.extend(["ita_Latn-eng_Latn", "eng_Latn-ita_Latn"])
+        
         bele = mteb.get_task(
             "BelebeleRetrieval",
-            # run ONLY the Italian subset
-            hf_subsets=["ita_Latn-ita_Latn"],
+            hf_subsets=bele_subsets,
         )
         tasks.append(bele)
+        logger.info(f"BelebeleRetrieval subsets: {bele_subsets}")
     except Exception as e:
-        logger.warning(f"Could not create BelebeleRetrieval task (ita_Latn-ita_Latn): {e}")
+        logger.warning(f"Could not create BelebeleRetrieval task: {e}")
 
+    # WikipediaRetrievalMultilingual - Italian tasks
     try:
+        wiki_subsets = ["it"]  # Italian monolingual
+        
+        # Add cross-lingual if requested
+        if args.cross_lingual:
+            wiki_subsets.extend(["it-en", "en-it"])
+        
         wiki = mteb.get_task(
             "WikipediaRetrievalMultilingual",
-            # for this task the subset id for Italian is just 'it'
-            hf_subsets=["it"],
-            # (optional) also signal language in ISO 639-3 form
-            languages=["ita"],
+            hf_subsets=wiki_subsets,
+            languages=["ita"],  # Still Italian-focused
         )
         tasks.append(wiki)
+        logger.info(f"WikipediaRetrievalMultilingual subsets: {wiki_subsets}")
     except Exception as e:
-        logger.warning(f"Could not create WikipediaRetrievalMultilingual task (it): {e}")
+        logger.warning(f"Could not create WikipediaRetrievalMultilingual task: {e}")
 
     if not tasks:
         logger.error("No tasks to evaluate after configuration. Exiting.")
@@ -102,12 +100,12 @@ def main():
 
     logger.info(f"Tasks to evaluate: {[t.metadata.name for t in tasks]}")
 
-    # Batch size / normalization forwarded to the modelâ€™s encode_* calls
+    # Batch size / normalization forwarded to the model's encode_* calls
     encode_kwargs = {"batch_size": args.batch_size}
     if args.normalize:
         encode_kwargs["normalize_embeddings"] = True
 
-    logger.info("Starting MTEB evaluation (Italian-only subsets)...")
+    logger.info("Starting MTEB evaluation (Italian subsets)...")
     results = mteb.evaluate(model, tasks, encode_kwargs=encode_kwargs)
 
     # ---- JSON-serializable dump ----
@@ -133,8 +131,6 @@ def main():
         logger.info(f"Saved results JSON to {args.save_json}")
 
     logger.info("Done.")
-
-
 
 
 if __name__ == "__main__":
